@@ -27,6 +27,7 @@ import org.pac4j.core.util.HttpUtils;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import com.zzlh.auth_client.common.constant.HTTPCode;
 import com.zzlh.auth_client.common.exception.ResException;
@@ -63,8 +64,9 @@ public class AuthService {
 			}
 		}
 		if(tgt == null) {
-			if(username == null ||password == null) {
-				response.sendRedirect(service+"login");
+			if(StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
+				response.sendRedirect(service+"/login");
+				throw new ResException(HTTPCode.LOGINERR,HTTPCode.code.get(HTTPCode.LOGINERR));
 			}else {
 				tgt = this.createTicketGrantingTicket(username,password);
 			}
@@ -106,12 +108,13 @@ public class AuthService {
 	 * @param serviceUrl           待授权服务路径
 	 * @return
 	 */
-	public String getServiceTicket(String ticketGrantingTicket, String serviceUrl, String username) {
+	public String getServiceTicket(String ticketGrantingTicket, String serviceUrl) {
+		String[] str = ticketGrantingTicket.split(":");
 		CasConfiguration casConfiguration = new CasConfiguration(CAS_SERVER_HOME);
 		final MockHttpServletRequest request = new MockHttpServletRequest();
 		final MockHttpServletResponse response = new MockHttpServletResponse();
 		final WebContext webContext = new J2EContext(request, response);
-		final CasRestProfile profile = new CasRestProfile(ticketGrantingTicket, username);
+		final CasRestProfile profile = new CasRestProfile(str[0], str[1]);
 		final CasRestFormClient client = new CasRestFormClient(casConfiguration, "username", "password");
 		final TokenCredentials casCredentials = client.requestServiceTicket(serviceUrl, profile, webContext);
 		return casCredentials.getToken();
@@ -122,8 +125,9 @@ public class AuthService {
 	 * @param serviceUrl    待授权服务路径
 	 * @param serviceTicket 服务证书
 	 * @return
+	 * @throws ResException 
 	 */
-	public CasProfile validateServiceTicket(String serviceUrl,String serviceTicket) {
+	public CasProfile validateServiceTicket(String serviceUrl,String serviceTicket) throws ResException {
 		CasConfiguration casConfiguration = new CasConfiguration(CAS_SERVER_HOME);
 		final CasRestFormClient client = new CasRestFormClient(casConfiguration, "username", "password");
 		final MockHttpServletRequest request = new MockHttpServletRequest();
@@ -131,6 +135,9 @@ public class AuthService {
 		final WebContext webContext = new J2EContext(request, response);
 		TokenCredentials casCredentials = new TokenCredentials(serviceTicket); 
 		final CasProfile casProfile = client.validateServiceTicket(serviceUrl, casCredentials, webContext);
+		if(casProfile == null) {
+			throw new ResException(HTTPCode.TICKETERR,HTTPCode.code.get(HTTPCode.TICKETERR));
+		}
 		Map<String, Object> attributes = casProfile.getAttributes();
 		Set<Map.Entry<String, Object>> mapEntries = attributes.entrySet();
 		for (Map.Entry<String, Object> entry : mapEntries) {
@@ -155,7 +162,7 @@ public class AuthService {
 			final String locationHeader = connection.getHeaderField("location");
 			final int responseCode = connection.getResponseCode();
 			if (locationHeader != null && responseCode == HttpConstants.CREATED) {
-				return locationHeader.substring(locationHeader.lastIndexOf("/") + 1);
+				return locationHeader.substring(locationHeader.lastIndexOf("/") + 1)+":"+username;
 			}else {
 				log.debug("获取授权票证(TGT)失败: " + locationHeader + " " + responseCode
 						+ HttpUtils.buildHttpErrorMessage(connection));

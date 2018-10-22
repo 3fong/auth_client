@@ -1,5 +1,6 @@
 package com.zzlh.auth_client.common.exception;
 
+import org.jasig.cas.client.validation.TicketValidationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -52,6 +53,12 @@ class GlobalExceptionHandler {
 		return ResponseEntity.generalResponse(HTTPCode.PARAMISNULL,HTTPCode.code.get(HTTPCode.PARAMISNULL),null);
 	}
 
+	@ExceptionHandler(value = TicketValidationException.class)
+	public ResponseEntity<Object> ticketValidationExceptionHandler(TicketValidationException e) {
+		log.error("request param: {}", e.getMessage());
+		return ResponseEntity.generalResponse(HTTPCode.PARAMISNULL,HTTPCode.code.get(HTTPCode.PARAMISNULL),null);
+	}
+	
 	/**
 	 * @Description 返回接口提示异常
 	 * @param e 自定义异常

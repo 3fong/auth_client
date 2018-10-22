@@ -13,7 +13,7 @@ public class HTTPCode {
 	public static final String CONTENTISNULL = "10003";
 	public static final String UNLOGIN = "10004";
 	public static final String LOGINERR = "10005";
-	public static final String LOGERROR = "10006";
+	public static final String TICKETERR = "10006";
 	public static final String SIGNERROR = "10007";
 	static {
 		code.put(SUCCESS,"访问成功");
@@ -23,7 +23,7 @@ public class HTTPCode {
 		code.put(CONTENTISNULL,"内容不存在");
 		code.put(UNLOGIN,"当前用户未登录或会话超时");
 		code.put(LOGINERR,"用户名或密码不正确");
-		code.put(LOGERROR,"日志记录异常");
+		code.put(TICKETERR,"票证(ticket)无效");
 		code.put(SIGNERROR,"签名异常");
 	}
 }

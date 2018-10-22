@@ -50,12 +50,12 @@ public class AuthController {
 	public void login(@RequestParam("service") String service,@RequestParam("username") String username,
 			@RequestParam("password") String password,HttpServletRequest request, HttpServletResponse response) throws ResException, IOException {
 		String tgt = authService.getTicketGrantingTicket(service, username, password, request, response);
-		String st = authService.getServiceTicket(tgt, service, username);
+		String st = authService.getServiceTicket(tgt, service);
 		log.info(request.getRequestURI());
 		Cookie cookie = new Cookie("tgt",tgt);
 		cookie.setMaxAge(600);
 		response.addCookie(cookie);
-		response.sendRedirect(service+"?tiket="+st);
+		response.sendRedirect(service+"/cas/ticket?ticket="+st);
 	}
 
 	/**
