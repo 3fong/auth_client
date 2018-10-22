@@ -9,6 +9,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.pac4j.cas.client.rest.CasRestFormClient;
 import org.pac4j.cas.config.CasConfiguration;
 import org.pac4j.cas.profile.CasProfile;
@@ -22,19 +26,58 @@ import org.pac4j.core.exception.TechnicalException;
 import org.pac4j.core.util.HttpUtils;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.stereotype.Service;
+
+import com.zzlh.auth_client.common.constant.HTTPCode;
+import com.zzlh.auth_client.common.exception.ResException;
+import com.zzlh.auth_client.domain.User;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Service
 public class AuthService {
 
-	private static final String CAS_SERVER_HOME = "http://localhost:8080/cas";
+	private final String CAS_SERVER_HOME = "http://localhost:8080/cas";
 
+	/**
+	 * @Description 获取服务授权票证
+	 * @param service 重定向地址
+	 * @param username 用户名
+	 * @param password 密码
+	 * @param request 请求体
+	 * @param response 响应体
+	 * @return 
+	 * @throws IOException
+	 * @throws ResException
+	 */
+	public String getTicketGrantingTicket(String service, String username, String password, HttpServletRequest request,
+			HttpServletResponse response) throws IOException, ResException {
+		String tgt = null;
+		Cookie[] cookies = request.getCookies();
+		if(cookies!=null&& cookies.length>0) {
+			for (Cookie cookie : cookies) {
+				if("tgt".equals(cookie.getName())) {
+					tgt = cookie.getValue();
+				}
+			}
+		}
+		if(tgt == null) {
+			if(username == null ||password == null) {
+				response.sendRedirect(service+"login");
+			}else {
+				tgt = this.createTicketGrantingTicket(username,password);
+			}
+		}
+		return tgt;
+	}
+	
 	/**
 	 * @Description 获取授权票证
 	 * @return TGT
+	 * @throws ResException 
 	 */
-	public static String getTicketGrantingTicket(String username, String password) {
+	private String createTicketGrantingTicket(String username,String password) throws ResException {
 		CasConfiguration casConfiguration = new CasConfiguration(CAS_SERVER_HOME);
 		final MockHttpServletRequest request = new MockHttpServletRequest();
 		final MockHttpServletResponse response = new MockHttpServletResponse();
@@ -47,7 +90,7 @@ public class AuthService {
 	 * @param ticketGrantingTicket
 	 * @param username
 	 */
-	public static void logoutTicketGrantingTicket(String ticketGrantingTicket, String username) {
+	public void logoutTicketGrantingTicket(String ticketGrantingTicket, String username) {
 		CasConfiguration casConfiguration = new CasConfiguration(CAS_SERVER_HOME);
 		final MockHttpServletRequest request = new MockHttpServletRequest();
 		final MockHttpServletResponse response = new MockHttpServletResponse();
@@ -63,7 +106,7 @@ public class AuthService {
 	 * @param serviceUrl           待授权服务路径
 	 * @return
 	 */
-	public static String getServiceTicket(String ticketGrantingTicket, String serviceUrl, String username) {
+	public String getServiceTicket(String ticketGrantingTicket, String serviceUrl, String username) {
 		CasConfiguration casConfiguration = new CasConfiguration(CAS_SERVER_HOME);
 		final MockHttpServletRequest request = new MockHttpServletRequest();
 		final MockHttpServletResponse response = new MockHttpServletResponse();
@@ -80,7 +123,7 @@ public class AuthService {
 	 * @param serviceTicket 服务证书
 	 * @return
 	 */
-	public static void validateServiceTicket(String serviceUrl,String serviceTicket) {
+	public CasProfile validateServiceTicket(String serviceUrl,String serviceTicket) {
 		CasConfiguration casConfiguration = new CasConfiguration(CAS_SERVER_HOME);
 		final CasRestFormClient client = new CasRestFormClient(casConfiguration, "username", "password");
 		final MockHttpServletRequest request = new MockHttpServletRequest();
@@ -93,10 +136,11 @@ public class AuthService {
 		for (Map.Entry<String, Object> entry : mapEntries) {
 			System.out.println(entry.getKey() + ":" + entry.getValue());
 		}
+		return casProfile;
 	}
 
-	private static String requestTicketGrantingTicket(final String username, final String password,
-			final WebContext context, final CasConfiguration configuration) {
+	private String requestTicketGrantingTicket(final String username, final String password,
+			final WebContext context, final CasConfiguration configuration) throws ResException {
 		HttpURLConnection connection = null;
 		try {
 			connection = HttpUtils.openPostConnection(new URL(configuration.computeFinalRestUrl(context)));
@@ -112,10 +156,11 @@ public class AuthService {
 			final int responseCode = connection.getResponseCode();
 			if (locationHeader != null && responseCode == HttpConstants.CREATED) {
 				return locationHeader.substring(locationHeader.lastIndexOf("/") + 1);
+			}else {
+				log.debug("获取授权票证(TGT)失败: " + locationHeader + " " + responseCode
+						+ HttpUtils.buildHttpErrorMessage(connection));
+				throw new ResException(HTTPCode.LOGINERR,HTTPCode.code.get(HTTPCode.LOGINERR));
 			}
-			log.debug("获取授权票证(TGT)失败: " + locationHeader + " " + responseCode
-					+ HttpUtils.buildHttpErrorMessage(connection));
-			return null;
 		} catch (final IOException e) {
 			throw new TechnicalException(e);
 		} finally {
@@ -123,11 +168,4 @@ public class AuthService {
 		}
 	}
 
-	public static void main(String[] args) {
-//		log.info(getTGT("huan", "Huan1"));
-		String serviceTicket = getServiceTicket("TGT-2-5v-yighJulULdaf3WBZT9yZzYVHkvnCrXCRvC89mjloubKqG-pE2jtytd7PSJS-xqLYDavid","http://localhost:8080", "huan");
-		log.info(serviceTicket);
-//		validateServiceTicket("http://localhost:8080",serviceTicket);
-		logoutTicketGrantingTicket("TGT-2-5v-yighJulULdaf3WBZT9yZzYVHkvnCrXCRvC89mjloubKqG-pE2jtytd7PSJS-xqLYDavid","huan");
-	}
 }

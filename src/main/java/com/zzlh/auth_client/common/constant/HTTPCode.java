@@ -12,7 +12,7 @@ public class HTTPCode {
 	public static final String PARAMISNULL = "10002";
 	public static final String CONTENTISNULL = "10003";
 	public static final String UNLOGIN = "10004";
-	public static final String DATELOW = "10005";
+	public static final String LOGINERR = "10005";
 	public static final String LOGERROR = "10006";
 	public static final String SIGNERROR = "10007";
 	static {
@@ -22,7 +22,7 @@ public class HTTPCode {
 		code.put(PARAMISNULL,"请求参数为空");
 		code.put(CONTENTISNULL,"内容不存在");
 		code.put(UNLOGIN,"当前用户未登录或会话超时");
-		code.put(DATELOW,"预上标日期应大于当前日期");
+		code.put(LOGINERR,"用户名或密码不正确");
 		code.put(LOGERROR,"日志记录异常");
 		code.put(SIGNERROR,"签名异常");
 	}
